@@ -25,9 +25,14 @@ constexpr int SCREEN_WIDTH  = 800 * 1.5f,
               FPS           = 60,
               SIZE = 1000;
 
+constexpr float MAX_ROW_AMP = 10.0f;
+
 constexpr char BG_COLOUR[] = "#B2AAC6";
 constexpr Vector2 ORIGIN = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2};
 constexpr Vector2 BASE_SIZE = {static_cast<float>(SIZE), static_cast<float>(SIZE)};
+constexpr Vector2 WITCH_OFFSET = {-200, 0};
+constexpr Vector2 STICK_OFFSET = {-120, 100};
+constexpr Vector2 CAULDRON_OFFSET {25, 145};
 
 // images drawn by me, so no suing yay :'D
 constexpr char WITCH_FP[] = "assets/witchMinusArms.png";
@@ -38,10 +43,13 @@ constexpr char CAULDRON_FP[] = "assets/cauldron.png";
 AppStatus gAppStatus    = RUNNING;
 float   gScaleFactor    = SIZE,
         gAngle          = 0.0f,
-        gPulseTime      = 0.0f;
-Vector2 gWitchOffset     = {-200, 0};
-Vector2 gStickOffset     = {-110,100};
-Vector2 gCauldronOffset = {25,145};
+        gPulseTime      = 0.0f,
+        gStickRowTime   = 0.0f,
+        gRowFreq        = 2.5f;
+Vector2 gWitchPos = {ORIGIN.x + WITCH_OFFSET.x, ORIGIN.y + WITCH_OFFSET.y};
+Vector2 gStickPos = {ORIGIN.x + STICK_OFFSET.x, ORIGIN.y + STICK_OFFSET.y};
+Vector2 gCauldronPos = {ORIGIN.x + CAULDRON_OFFSET.x,
+                            ORIGIN.y + CAULDRON_OFFSET.y};
 Vector2 gScale          = BASE_SIZE;
 float gPreviousTicks = 0.0f;
 
@@ -79,6 +87,13 @@ void update(){
     float deltaTime = ticks - gPreviousTicks;
     gPreviousTicks = ticks;
 
+    // stirring/rowing motion
+    gStickRowTime += 1.0f*deltaTime;
+    gStickPos = {
+        ORIGIN.x + STICK_OFFSET.x + MAX_ROW_AMP * cos(gRowFreq*gStickRowTime),
+        ORIGIN.y + STICK_OFFSET.y + 0.5f * MAX_ROW_AMP * sin(gRowFreq*gStickRowTime)
+    };
+
     // gPulseTime += 1.0f*deltaTime;
 
     // gScale = {
@@ -100,8 +115,8 @@ void render(){
     };
 
     Rectangle wDestinationArea = {
-        ORIGIN.x + gWitchOffset.x,
-        ORIGIN.y + gWitchOffset.y,
+        gWitchPos.x,
+        gWitchPos.y,
         static_cast<float>(gWitchTexture.width),
         static_cast<float>(gWitchTexture.height)
     };
@@ -129,8 +144,8 @@ void render(){
     };
 
     Rectangle sDestinationArea = {
-        ORIGIN.x + gStickOffset.x,
-        ORIGIN.y + gStickOffset.y,
+        gStickPos.x,
+        gStickPos.y,
         static_cast<float>(gStickTexture.width),
         static_cast<float>(gStickTexture.height)
     };
@@ -157,8 +172,8 @@ void render(){
     };
 
     Rectangle cDestinationArea = {
-        ORIGIN.x + gCauldronOffset.x,
-        ORIGIN.y + gCauldronOffset.y,
+        gCauldronPos.x,
+        gCauldronPos.y,
         static_cast<float>(gCauldronTexture.width),
         static_cast<float>(gCauldronTexture.height)
     };
