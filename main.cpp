@@ -24,20 +24,22 @@
 constexpr int SCREEN_WIDTH  = 800 * 1.5f,
               SCREEN_HEIGHT = 450 * 1.5f,
               FPS           = 60,
-              SIZE = 75;
+              SIZE = 45;
 
 constexpr float MAX_ROW_AMP     = 10.0f,
                 MAX_RAND_RANGE  = 90.0f,
-                BUBBLE_SPACING = 175.0f;
+                BUBBLE_SPACING = 140.0f;
 
 constexpr char BG_COLOUR[] = "#B2AAC6";
 constexpr Vector2 ORIGIN = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2};
-constexpr Vector2 BUBBLE_BASE_SIZE = {static_cast<float>(SIZE),
+constexpr Vector2 BUBBLE_BASE_SIZE = {SIZE/4.0f,
+                                      SIZE/4.0f};
+constexpr Vector2 BUBBLE_MAX_SIZE = {static_cast<float>(SIZE),
                                       static_cast<float>(SIZE)};
 constexpr Vector2 WITCH_OFFSET = {-200, 0};
 constexpr Vector2 STICK_OFFSET = {-120, 100};
 constexpr Vector2 CAULDRON_OFFSET = {25, 145};
-constexpr Vector2 BUBBLE_SWIRL_OFFSET = {0, 140};
+constexpr Vector2 BUBBLE_SWIRL_OFFSET = {0, 70};
 
 // images drawn by me, so no suing yay :'D
 constexpr char WITCH_FP[] = "assets/witchMinusArms.png";
@@ -54,21 +56,27 @@ float   gScaleFactor    = SIZE,
         gStickRowTime   = 0.0f,
         gRowFreq        = 2.5f,
         gPreviousTicks  = 0.0f,
-        gBubbleSpeed    = 20.0f,
-        gBubbleTime     = 0.0f;
+        gBubbleSpeed    = 40.0f,
+        gBubbleGrowth   = 20.0f;
 Vector2 gWitchPos = {ORIGIN.x + WITCH_OFFSET.x, ORIGIN.y + WITCH_OFFSET.y};
 Vector2 gStickPos = {ORIGIN.x + STICK_OFFSET.x, ORIGIN.y + STICK_OFFSET.y};
 Vector2 gCauldronPos = {ORIGIN.x + CAULDRON_OFFSET.x,
                             ORIGIN.y + CAULDRON_OFFSET.y};
-Vector2 gBubbleScale          = BUBBLE_BASE_SIZE;
 
+std::vector<float> gBubbleExtraOffset = {100, 10, 55};
 std::vector<Vector2> gBubblePosList = { // lowest to highest
-    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + 70,
+    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[0],
      ORIGIN.y + BUBBLE_SWIRL_OFFSET.y},
-    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + 25,
+    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[1],
      ORIGIN.y + BUBBLE_SWIRL_OFFSET.y - BUBBLE_SPACING},
-    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + 55,
+    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[2],
      ORIGIN.y + BUBBLE_SWIRL_OFFSET.y - 2*BUBBLE_SPACING}
+};
+
+std::vector<Vector2> gBubbleScaleList = {
+    BUBBLE_BASE_SIZE,
+    BUBBLE_MAX_SIZE,
+    BUBBLE_MAX_SIZE
 };
 
 Texture2D gWitchTexture;
@@ -120,6 +128,16 @@ void update(){
     // gBubbleTime += 1.0f*deltaTime;
     for (int i = 0; i < 3; i++){
         gBubblePosList[i].y -= gBubbleSpeed*deltaTime; // check for wrap later
+        if (gBubblePosList[i].y < -1 * SIZE) {
+            gBubblePosList[i] = {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x 
+                                + gBubbleExtraOffset[i],
+                                 ORIGIN.y + BUBBLE_SWIRL_OFFSET.y};
+            gBubbleScaleList[i] = BUBBLE_BASE_SIZE;
+        }
+        else if (gBubbleScaleList[i].x < BUBBLE_MAX_SIZE.x) {
+            gBubbleScaleList[i].x += gBubbleGrowth*deltaTime;
+            gBubbleScaleList[i].y += gBubbleGrowth*deltaTime;
+        }
     }
 
 
@@ -192,6 +210,37 @@ void render(){
         WHITE
     );
 
+
+    // bubbles
+    Rectangle bTextureArea = {
+        0.0f, 0.0f,
+        static_cast<float>(gBubbleTexture.width),
+        static_cast<float>(gBubbleTexture.height)
+    };
+
+    for (int i = 0; i < 3; i++){
+        Rectangle bDestinationArea = {
+            gBubblePosList[i].x,
+            gBubblePosList[i].y,
+            gBubbleScaleList[i].x,
+            gBubbleScaleList[i].y
+        };
+
+        Vector2 bubbleOrigin = {
+            static_cast<float>(gBubbleScaleList[i].x)/2,
+            static_cast<float>(gBubbleScaleList[i].y)/2
+        };
+
+        DrawTexturePro(
+            gBubbleTexture,
+            bTextureArea,
+            bDestinationArea,
+            bubbleOrigin,
+            gAngle,
+            WHITE
+        );
+    }
+
     // cauldron
     Rectangle cTextureArea = {
         0.0f, 0.0f,
@@ -219,43 +268,6 @@ void render(){
         gAngle,
         WHITE
     );
-
-    // bubbles
-    Rectangle bTextureArea = {
-        0.0f, 0.0f,
-        static_cast<float>(gBubbleTexture.width),
-        static_cast<float>(gBubbleTexture.height)
-    };
-
-    Rectangle bDestinationArea = {
-        gBubblePosList[0].x,
-        gBubblePosList[0].y,
-        static_cast<float>(gBubbleScale.x),
-        static_cast<float>(gBubbleScale.y)
-    };
-
-    Vector2 bubbleOrigin = {
-        static_cast<float>(gBubbleScale.x)/2,
-        static_cast<float>(gBubbleScale.y)/2
-    };
-
-    for (int i = 0; i < 3; i++){
-        Rectangle bDestinationArea = {
-            gBubblePosList[i].x,
-            gBubblePosList[i].y,
-            static_cast<float>(gBubbleScale.x),
-            static_cast<float>(gBubbleScale.y)
-        };
-
-        DrawTexturePro(
-            gBubbleTexture,
-            bTextureArea,
-            bDestinationArea,
-            bubbleOrigin,
-            gAngle,
-            WHITE
-        );
-    }
 
     EndDrawing();
 }
