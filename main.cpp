@@ -26,9 +26,9 @@ constexpr int SCREEN_WIDTH  = 800 * 1.5f,
               FPS           = 60,
               SIZE = 45;
 
-constexpr float MAX_ROW_AMP     = 10.0f,
-                MAX_RAND_RANGE  = 90.0f,
-                BUBBLE_SPACING = 140.0f;
+constexpr float MAX_ROW_AMP         = 10.0f,
+                MAX_BUBBLE_AMP      = 20.0f,
+                BUBBLE_SPACING      = 140.0f;
 
 constexpr char BG_COLOUR[] = "#B2AAC6";
 constexpr Vector2 ORIGIN = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2};
@@ -53,7 +53,7 @@ AppStatus gAppStatus    = RUNNING;
 float   gScaleFactor    = SIZE,
         gAngle          = 0.0f,
         gPulseTime      = 0.0f,
-        gStickRowTime   = 0.0f,
+        gTotalTime   = 0.0f,
         gRowFreq        = 2.5f,
         gPreviousTicks  = 0.0f,
         gBubbleSpeed    = 40.0f,
@@ -116,18 +116,20 @@ void update(){
     float ticks = static_cast<float>(GetTime());
     float deltaTime = ticks - gPreviousTicks;
     gPreviousTicks = ticks;
+    gTotalTime += 1.0f*deltaTime;
 
     // stirring/rowing motion
-    gStickRowTime += 1.0f*deltaTime;
     gStickPos = {
-        ORIGIN.x + STICK_OFFSET.x + MAX_ROW_AMP * cos(gRowFreq*gStickRowTime),
-        ORIGIN.y + STICK_OFFSET.y + 0.5f * MAX_ROW_AMP * sin(gRowFreq*gStickRowTime)
+        ORIGIN.x + STICK_OFFSET.x + MAX_ROW_AMP * cos(gRowFreq*gTotalTime),
+        ORIGIN.y + STICK_OFFSET.y + 0.5f * MAX_ROW_AMP * sin(gRowFreq*gTotalTime)
     };
 
     // bubbling
     // gBubbleTime += 1.0f*deltaTime;
-    for (int i = 0; i < 3; i++){
+    for (size_t i = 0; i < gBubblePosList.size(); i++){
         gBubblePosList[i].y -= gBubbleSpeed*deltaTime; // check for wrap later
+        gBubblePosList[i].x = ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[i]
+                                + MAX_BUBBLE_AMP*cos(gTotalTime);
         if (gBubblePosList[i].y < -1 * SIZE) {
             gBubblePosList[i] = {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x 
                                 + gBubbleExtraOffset[i],
@@ -218,7 +220,7 @@ void render(){
         static_cast<float>(gBubbleTexture.height)
     };
 
-    for (int i = 0; i < 3; i++){
+    for (size_t i = 0; i < gBubblePosList.size(); i++){
         Rectangle bDestinationArea = {
             gBubblePosList[i].x,
             gBubblePosList[i].y,
