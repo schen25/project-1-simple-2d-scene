@@ -57,7 +57,10 @@ float   gScaleFactor    = SIZE,
         gRowFreq        = 2.5f,
         gPreviousTicks  = 0.0f,
         gBubbleSpeed    = 40.0f,
-        gBubbleGrowth   = 20.0f;
+        gBubbleGrowth   = 20.0f,
+        gOrbitRadius = SIZE/2.0f + 10.0f,
+        gBubToSwRatio = 2.0f,
+        gRotationSpeed = 300.0f;
 Vector2 gWitchPos = {ORIGIN.x + WITCH_OFFSET.x, ORIGIN.y + WITCH_OFFSET.y};
 Vector2 gStickPos = {ORIGIN.x + STICK_OFFSET.x, ORIGIN.y + STICK_OFFSET.y};
 Vector2 gCauldronPos = {ORIGIN.x + CAULDRON_OFFSET.x,
@@ -78,6 +81,8 @@ std::vector<Vector2> gBubbleScaleList = {
     BUBBLE_MAX_SIZE,
     BUBBLE_MAX_SIZE
 };
+
+std::vector<float> gSwirlAngleList(gBubblePosList.size(), 0.0f);
 
 Texture2D gWitchTexture;
 Texture2D gStickTexture;
@@ -125,11 +130,12 @@ void update(){
     };
 
     // bubbling
-    // gBubbleTime += 1.0f*deltaTime;
     for (size_t i = 0; i < gBubblePosList.size(); i++){
-        gBubblePosList[i].y -= gBubbleSpeed*deltaTime; // check for wrap later
+        gBubblePosList[i].y -= gBubbleSpeed*deltaTime; 
+       
         gBubblePosList[i].x = ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[i]
-                                + MAX_BUBBLE_AMP*cos(gTotalTime);
+                                + (1+i/2.0f)*MAX_BUBBLE_AMP*cos((1+(i/10.0f))*gTotalTime);
+         // multiplied by (1 + i/c) to add some variance to the motion
         if (gBubblePosList[i].y < -1 * SIZE) {
             gBubblePosList[i] = {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x 
                                 + gBubbleExtraOffset[i],
@@ -140,6 +146,11 @@ void update(){
             gBubbleScaleList[i].x += gBubbleGrowth*deltaTime;
             gBubbleScaleList[i].y += gBubbleGrowth*deltaTime;
         }
+    }
+
+    //swirling
+    for (size_t i = 0; i < gSwirlAngleList.size(); i++){
+        gSwirlAngleList[i] += gRotationSpeed*deltaTime;
     }
 
 
@@ -242,6 +253,38 @@ void render(){
             WHITE
         );
     }
+
+    // swirls
+    Rectangle swTextureArea = {
+        0.0f, 0.0f,
+        static_cast<float>(gSwirlTexture.width),
+        static_cast<float>(gSwirlTexture.height)
+    };
+
+    // each swirl orbits a bubble
+    for (size_t i = 0; i < gBubblePosList.size(); i++){
+        Rectangle swDestinationArea = {
+            gBubblePosList[i].x + gOrbitRadius, // at radius of circle
+            gBubblePosList[i].y + gOrbitRadius,
+            gBubbleScaleList[i].x / gBubToSwRatio,
+            gBubbleScaleList[i].y / gBubToSwRatio
+        };
+
+        Vector2 swirlOrigin = {
+            static_cast<float>(gBubbleScaleList[i].x / gBubToSwRatio)/2,
+            static_cast<float>(gBubbleScaleList[i].y / gBubToSwRatio)/2
+        };
+
+        DrawTexturePro(
+            gSwirlTexture,
+            swTextureArea,
+            swDestinationArea,
+            swirlOrigin,
+            gSwirlAngleList[i],
+            WHITE
+        );
+    }
+
 
     // cauldron
     Rectangle cTextureArea = {
