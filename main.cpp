@@ -28,7 +28,7 @@ constexpr int SCREEN_WIDTH  = 800 * 1.5f,
 
 constexpr float MAX_ROW_AMP         = 10.0f,
                 MAX_BUBBLE_AMP      = 20.0f,
-                BUBBLE_SPACING      = 90.0f; //140.0f;
+                BUBBLE_SPACING      = 90.0f; 
 
 constexpr char BG_COLOUR[] = "#B2AAC6";
 constexpr Vector2 ORIGIN = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2};
@@ -59,7 +59,9 @@ float   gScaleFactor    = SIZE,
         gBubbleGrowth   = 20.0f,
         gOrbitRadius    = SIZE/2.0f + 20.0f,
         gBubToSwRatio   = 2.0f,
-        gRotationSpeed  = 300.0f;
+        gRotationSpeed  = 300.0f,
+        gDisappearSpeed = 2.0f,
+        gFadeThreshold  = 120.0f; // start fading if y < gFadeThreshold
 Vector2 gWitchPos = {ORIGIN.x + WITCH_OFFSET.x, ORIGIN.y + WITCH_OFFSET.y};
 Vector2 gStickPos = {ORIGIN.x + STICK_OFFSET.x, ORIGIN.y + STICK_OFFSET.y};
 Vector2 gCauldronPos = {ORIGIN.x + CAULDRON_OFFSET.x,
@@ -70,6 +72,7 @@ std::vector<Vector2> gBubblePosList(gBubbleExtraOffset.size());
 std::vector<Vector2> gBubbleScaleList(gBubbleExtraOffset.size());
 std::vector<float> gSwirlAngleList(gBubbleExtraOffset.size(), 0.0f);
 std::vector<Vector2> gSwirlPosList(gBubbleExtraOffset.size());
+std::vector<Color> gTintList(gBubbleExtraOffset.size(), Color{255, 255, 255, 255});
 
 Texture2D gWitchTexture;
 Texture2D gStickTexture;
@@ -95,14 +98,16 @@ void initialise(){
     gBubbleTexture = LoadTexture(BUBBLE_FP);
     gSwirlTexture = LoadTexture(SWIRL_FP);
 
-    // initialize bubble positions, bubble scaling, and swirl positions
+    // initialize bubble positions, bubble scaling, swirl positions, and tint
     for (size_t i = 0; i < gBubbleExtraOffset.size(); i++){
         gBubblePosList[i] = {
             ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[i],
             ORIGIN.y + BUBBLE_SWIRL_OFFSET.y - i*BUBBLE_SPACING
         };
 
-        float currBubbleSize = std::min(i*BUBBLE_SPACING / gBubbleSpeed * gBubbleGrowth,
+        float prevTimePassed = i*BUBBLE_SPACING / gBubbleSpeed;
+
+        float currBubbleSize = std::min(prevTimePassed* gBubbleGrowth,
                                     BUBBLE_MAX_SIZE.x);
         gBubbleScaleList[i] = {
             currBubbleSize,
@@ -113,6 +118,16 @@ void initialise(){
             gBubblePosList[i].x + cos(static_cast<float>(i))*gOrbitRadius,
             gBubblePosList[i].y + sin(static_cast<float>(i))*gOrbitRadius
         };
+
+        if (gBubblePosList[i].y < gFadeThreshold){
+            float pastThreshTime = (gFadeThreshold - gBubblePosList[i].y) / gBubbleSpeed;
+            gTintList[i].a = static_cast<unsigned char>(std::max(0.0f, 255.0f-(gDisappearSpeed* pastThreshTime)));
+        }
+
+        // gTintList[i] = Color{
+        //     255, 255, 255,
+        //     static_cast<unsigned char>(std::max(0.0f, 255.0f-(gDisappearSpeed*prevTimePassed)))
+        // };
     }
 
 
@@ -148,11 +163,22 @@ void update(){
                                 + gBubbleExtraOffset[i],
                                  ORIGIN.y + BUBBLE_SWIRL_OFFSET.y};
             gBubbleScaleList[i] = BUBBLE_BASE_SIZE;
+            gTintList[i].a = 255;
+            continue;
         }
-        else if (gBubbleScaleList[i].x < BUBBLE_MAX_SIZE.x) {
+
+        if (gBubbleScaleList[i].x < BUBBLE_MAX_SIZE.x) {
             gBubbleScaleList[i].x += gBubbleGrowth*deltaTime;
             gBubbleScaleList[i].y += gBubbleGrowth*deltaTime;
         }
+
+        if (gBubblePosList[i].y < gFadeThreshold){
+            if (gTintList[i].a > gDisappearSpeed*deltaTime)
+                gTintList[i].a = static_cast<unsigned char>(gTintList[i].a - gDisappearSpeed*deltaTime);
+            else gTintList[i].a = 0;
+        }
+        
+        
     }
 
     //swirling and orbiting
@@ -252,7 +278,7 @@ void render(){
             bDestinationArea,
             bubbleOrigin,
             gAngle,
-            WHITE
+            gTintList[i]
         );
     }
 
@@ -283,7 +309,7 @@ void render(){
             swDestinationArea,
             swirlOrigin,
             gSwirlAngleList[i],
-            WHITE
+            gTintList[i]//WHITE
         );
     }
 
