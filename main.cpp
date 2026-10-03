@@ -28,7 +28,8 @@ constexpr int SCREEN_WIDTH  = 800 * 1.5f,
 
 constexpr float MAX_ROW_AMP         = 10.0f,
                 MAX_BUBBLE_AMP      = 20.0f,
-                BUBBLE_SPACING      = 90.0f; 
+                BUBBLE_SPACING      = 90.0f,
+                MAX_COLOR_AMP       = 20.0f; 
 
 constexpr char BG_COLOUR[] = "#B2AAC6";
 constexpr Vector2 ORIGIN = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2};
@@ -66,7 +67,6 @@ Vector2 gWitchPos = {ORIGIN.x + WITCH_OFFSET.x, ORIGIN.y + WITCH_OFFSET.y};
 Vector2 gStickPos = {ORIGIN.x + STICK_OFFSET.x, ORIGIN.y + STICK_OFFSET.y};
 Vector2 gCauldronPos = {ORIGIN.x + CAULDRON_OFFSET.x,
                             ORIGIN.y + CAULDRON_OFFSET.y};
-
 std::vector<float> gBubbleExtraOffset = {100, 10, 55, 75, 25};
 std::vector<Vector2> gBubblePosList(gBubbleExtraOffset.size());
 std::vector<Vector2> gBubbleScaleList(gBubbleExtraOffset.size());
@@ -79,6 +79,8 @@ Texture2D gStickTexture;
 Texture2D gCauldronTexture;
 Texture2D gBubbleTexture;
 Texture2D gSwirlTexture;
+
+Color gBgColor;
 
 // Function Declarations
 void intialise();
@@ -123,13 +125,10 @@ void initialise(){
             float pastThreshTime = (gFadeThreshold - gBubblePosList[i].y) / gBubbleSpeed;
             gTintList[i].a = static_cast<unsigned char>(std::max(0.0f, 255.0f-(gDisappearSpeed* pastThreshTime)));
         }
-
-        // gTintList[i] = Color{
-        //     255, 255, 255,
-        //     static_cast<unsigned char>(std::max(0.0f, 255.0f-(gDisappearSpeed*prevTimePassed)))
-        // };
     }
 
+    // set background color
+    gBgColor = ColorFromHex(BG_COLOUR);
 
     SetTargetFPS(FPS);
 }
@@ -177,8 +176,6 @@ void update(){
                 gTintList[i].a = static_cast<unsigned char>(gTintList[i].a - gDisappearSpeed*deltaTime);
             else gTintList[i].a = 0;
         }
-        
-        
     }
 
     //swirling and orbiting
@@ -188,12 +185,14 @@ void update(){
         gSwirlPosList[i].y = gBubblePosList[i].y + sin(static_cast<float>(i) + gTotalTime)*gOrbitRadius;
     }
 
+    // background color changing
+    gBgColor.b = ColorFromHex(BG_COLOUR).b + MAX_COLOR_AMP*cos(gTotalTime);
 }
 
 void render(){
     BeginDrawing();
 
-    ClearBackground(ColorFromHex(BG_COLOUR));
+    ClearBackground(gBgColor);
 
     // witch (minus arms)
     Rectangle wTextureArea = {
