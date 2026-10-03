@@ -28,7 +28,7 @@ constexpr int SCREEN_WIDTH  = 800 * 1.5f,
 
 constexpr float MAX_ROW_AMP         = 10.0f,
                 MAX_BUBBLE_AMP      = 20.0f,
-                BUBBLE_SPACING      = 140.0f;
+                BUBBLE_SPACING      = 90.0f; //140.0f;
 
 constexpr char BG_COLOUR[] = "#B2AAC6";
 constexpr Vector2 ORIGIN = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2};
@@ -52,37 +52,24 @@ constexpr char SWIRL_FP[] = "assets/swirl.png";
 AppStatus gAppStatus    = RUNNING;
 float   gScaleFactor    = SIZE,
         gAngle          = 0.0f,
-        gPulseTime      = 0.0f,
-        gTotalTime   = 0.0f,
+        gTotalTime      = 0.0f,
         gRowFreq        = 2.5f,
         gPreviousTicks  = 0.0f,
         gBubbleSpeed    = 40.0f,
         gBubbleGrowth   = 20.0f,
-        gOrbitRadius = SIZE/2.0f + 10.0f,
-        gBubToSwRatio = 2.0f,
-        gRotationSpeed = 300.0f;
+        gOrbitRadius    = SIZE/2.0f + 20.0f,
+        gBubToSwRatio   = 2.0f,
+        gRotationSpeed  = 300.0f;
 Vector2 gWitchPos = {ORIGIN.x + WITCH_OFFSET.x, ORIGIN.y + WITCH_OFFSET.y};
 Vector2 gStickPos = {ORIGIN.x + STICK_OFFSET.x, ORIGIN.y + STICK_OFFSET.y};
 Vector2 gCauldronPos = {ORIGIN.x + CAULDRON_OFFSET.x,
                             ORIGIN.y + CAULDRON_OFFSET.y};
 
-std::vector<float> gBubbleExtraOffset = {100, 10, 55};
-std::vector<Vector2> gBubblePosList = { // lowest to highest
-    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[0],
-     ORIGIN.y + BUBBLE_SWIRL_OFFSET.y},
-    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[1],
-     ORIGIN.y + BUBBLE_SWIRL_OFFSET.y - BUBBLE_SPACING},
-    {ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[2],
-     ORIGIN.y + BUBBLE_SWIRL_OFFSET.y - 2*BUBBLE_SPACING}
-};
-
-std::vector<Vector2> gBubbleScaleList = {
-    BUBBLE_BASE_SIZE,
-    BUBBLE_MAX_SIZE,
-    BUBBLE_MAX_SIZE
-};
-
-std::vector<float> gSwirlAngleList(gBubblePosList.size(), 0.0f);
+std::vector<float> gBubbleExtraOffset = {100, 10, 55, 75, 25};
+std::vector<Vector2> gBubblePosList(gBubbleExtraOffset.size());
+std::vector<Vector2> gBubbleScaleList(gBubbleExtraOffset.size());
+std::vector<float> gSwirlAngleList(gBubbleExtraOffset.size(), 0.0f);
+std::vector<Vector2> gSwirlPosList(gBubbleExtraOffset.size());
 
 Texture2D gWitchTexture;
 Texture2D gStickTexture;
@@ -107,6 +94,26 @@ void initialise(){
     gCauldronTexture = LoadTexture(CAULDRON_FP);
     gBubbleTexture = LoadTexture(BUBBLE_FP);
     gSwirlTexture = LoadTexture(SWIRL_FP);
+
+    // initialize bubble positions, bubble scaling, and swirl positions
+    for (size_t i = 0; i < gBubbleExtraOffset.size(); i++){
+        gBubblePosList[i] = {
+            ORIGIN.x + BUBBLE_SWIRL_OFFSET.x + gBubbleExtraOffset[i],
+            ORIGIN.y + BUBBLE_SWIRL_OFFSET.y - i*BUBBLE_SPACING
+        };
+
+        float currBubbleSize = std::min(i*BUBBLE_SPACING / gBubbleSpeed * gBubbleGrowth,
+                                    BUBBLE_MAX_SIZE.x);
+        gBubbleScaleList[i] = {
+            currBubbleSize,
+            currBubbleSize
+        };
+
+        gSwirlPosList[i] = {
+            gBubblePosList[i].x + cos(static_cast<float>(i))*gOrbitRadius,
+            gBubblePosList[i].y + sin(static_cast<float>(i))*gOrbitRadius
+        };
+    }
 
 
     SetTargetFPS(FPS);
@@ -148,18 +155,13 @@ void update(){
         }
     }
 
-    //swirling
+    //swirling and orbiting
     for (size_t i = 0; i < gSwirlAngleList.size(); i++){
         gSwirlAngleList[i] += gRotationSpeed*deltaTime;
+        gSwirlPosList[i].x = gBubblePosList[i].x + cos(static_cast<float>(i) + gTotalTime)*gOrbitRadius;
+        gSwirlPosList[i].y = gBubblePosList[i].y + sin(static_cast<float>(i) + gTotalTime)*gOrbitRadius;
     }
 
-
-    // gPulseTime += 1.0f*deltaTime;
-
-    // gScale = {
-    //     BASE_SIZE.x + MAX_AMP * cos(gPulseTime),
-    //     BASE_SIZE.y + MAX_AMP * cos(gPulseTime)
-    // };
 }
 
 void render(){
@@ -264,8 +266,8 @@ void render(){
     // each swirl orbits a bubble
     for (size_t i = 0; i < gBubblePosList.size(); i++){
         Rectangle swDestinationArea = {
-            gBubblePosList[i].x + gOrbitRadius, // at radius of circle
-            gBubblePosList[i].y + gOrbitRadius,
+            gSwirlPosList[i].x, // at radius of circle
+            gSwirlPosList[i].y,
             gBubbleScaleList[i].x / gBubToSwRatio,
             gBubbleScaleList[i].y / gBubToSwRatio
         };
